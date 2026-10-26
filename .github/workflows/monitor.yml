@@ -1,9 +1,17 @@
 name: Monitor de passagens
 
+# O seu computador faz a busca toda hora e envia o painel (mais preciso: o Google mostra
+# todos os voos para quem está no Brasil). Este workflow:
+#  - publica o painel sempre que o computador envia uma atualização (push em docs/);
+#  - aos :30 de cada hora, faz a busca ele mesmo se o painel estiver há mais de 50 min
+#    sem atualizar (computador desligado), para o painel nunca ficar parado.
 on:
   schedule:
-    - cron: "0 * * * *"   # toda hora (o GitHub pode atrasar alguns minutos)
-  workflow_dispatch:       # botão "Run workflow" para rodar na hora
+    - cron: "30 * * * *"
+  push:
+    branches: [main]
+    paths: ["docs/**"]
+  workflow_dispatch:       # botão "Run workflow": busca na hora, mesmo com dados recentes
 
 permissions:
   contents: write
@@ -24,26 +32,31 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
+        if: github.event_name != 'push'
         with:
           python-version: "3.11"
           cache: pip
 
-      - run: pip install -r requirements.txt
+      - if: github.event_name != 'push'
+        run: pip install -r requirements.txt
 
       - name: Buscar preços e gerar painel
-        run: python painel.py
+        if: github.event_name != 'push'
+        run: python painel.py ${{ github.event_name == 'schedule' && '--se-desatualizado 50' || '' }}
         env:
+          ORIGEM_BUSCA: github
           EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
           EMAIL_SENHA_APP: ${{ secrets.EMAIL_SENHA_APP }}
           EMAIL_PARA: ${{ secrets.EMAIL_PARA }}
           PAINEL_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
 
       - name: Salvar histórico no repositório
+        if: github.event_name != 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs dados
-          git diff --cached --quiet || git commit -m "Atualiza preços $(TZ=America/Sao_Paulo date '+%d/%m %H:%M')"
+          git diff --cached --quiet || git commit -m "Atualiza preços (GitHub) $(TZ=America/Sao_Paulo date '+%d/%m %H:%M')"
           git push
 
       - uses: actions/upload-pages-artifact@v3

@@ -368,7 +368,9 @@ def gerar_painel(cfg: dict, voos: dict, combos: list[dict], hist: dict, ctx: dic
 <title>Monitor de Passagens</title><style>{CSS}</style></head><body><main>
 <h1>✈ {cfg['origem']} ⇄ {cfg['destino']}</h1>
 <p class="sub">{descricao}</p>
-<p class="sub">Atualizado em {agora:%d/%m/%Y às %H:%M} (Brasília) · verifica a cada hora · {cfg.get('adultos', 1)} adulto(s)
+<p class="sub">Atualizado em {agora:%d/%m/%Y às %H:%M} (Brasília) pelo
+{'GitHub (seu computador estava desligado)' if os.environ.get('ORIGEM_BUSCA') == 'github' else 'seu computador'}
+· verifica a cada hora · {cfg.get('adultos', 1)} adulto(s)
 · preços do Google Flights, confira no link antes de comprar</p>
 <div class="resumo">{''.join(kpis)}</div>
 <div class="legenda">{legenda}</div>
@@ -404,9 +406,18 @@ def main() -> None:
     cfg = json.loads((PASTA / "monitor.json").read_text(encoding="utf-8"))
     agora = datetime.now(BRT)
     prazo = date.fromisoformat(cfg["volta_ate"])
+    hist = carregar_historico()
+
+    # --se-desatualizado N: só busca se a última verificação (de qualquer máquina) tem mais de N minutos
+    if "--se-desatualizado" in sys.argv:
+        limite_min = int(sys.argv[sys.argv.index("--se-desatualizado") + 1])
+        if hist["execucoes"]:
+            idade = (agora - datetime.fromisoformat(hist["execucoes"][-1]["quando"])).total_seconds() / 60
+            if idade < limite_min:
+                print(f"Última verificação há {idade:.0f} min (< {limite_min}); pulando esta.")
+                return
 
     voos = buscar(cfg, agora.date())
-    hist = carregar_historico()
     todos = voos["ida"] + voos["volta"]
     if not todos:
         print("Nenhum voo encontrado (Google pode ter bloqueado ou o período acabou). Painel mantido.")
@@ -436,6 +447,7 @@ def main() -> None:
     for v in todos:
         hist["precos"][chave(v)] = {"atual": v.preco, "visto": agora.isoformat(timespec="minutes")}
     hist["execucoes"].append({"quando": agora.isoformat(timespec="minutes"), "melhor_total": total,
+                              "origem": os.environ.get("ORIGEM_BUSCA", "pc"),
                               "melhor_ida": voos["ida"][0].preco if voos["ida"] else None,
                               "melhor_volta": voos["volta"][0].preco if voos["volta"] else None})
     salvar_historico(hist)
