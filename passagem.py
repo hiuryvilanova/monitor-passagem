@@ -20,6 +20,8 @@ from urllib.parse import quote_plus
 
 import requests
 from fast_flights import FlightQuery, FlightsNotFound, Passengers, create_query, get_flights
+from fast_flights.integrations.base import FetchIntegration
+from primp import Client
 
 PASTA = Path(__file__).parent
 PAUSA_ENTRE_BUSCAS = 1.5  # segundos, para não ser bloqueado pelo Google
@@ -58,6 +60,14 @@ class Hotel:
     link: str
 
 
+class GoogleBrasil(FetchIntegration):
+    """Busca no Google Flights como se fosse do Brasil (gl=BR), mesmo rodando num servidor fora do país."""
+
+    def fetch_html(self, q, /) -> str:
+        client = Client(impersonate="chrome_145", impersonate_os="macos", referer=True, cookie_store=True)
+        return client.get("https://www.google.com/travel/flights", params={**q.params(), "gl": "BR"}).text
+
+
 def carregar_env() -> None:
     """Lê variáveis do arquivo .env da pasta do script (ex.: SERPAPI_KEY=...)."""
     arquivo = PASTA / ".env"
@@ -85,7 +95,7 @@ def buscar_voos(origem: str, destino: str, dia: date, args) -> list[Voo]:
         checked_bags=args.malas,
     )
     try:
-        resultados = get_flights(query)
+        resultados = get_flights(query, integration=GoogleBrasil())
     except FlightsNotFound:
         return []
     except Exception as erro:

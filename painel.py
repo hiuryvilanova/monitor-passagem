@@ -446,6 +446,10 @@ def main() -> None:
         motivos.append(f"ida + volta caiu de {p.reais(anterior)} para {p.reais(total)}")
     if total and limite and total <= limite and (not anterior or anterior > limite):
         motivos.append(f"ida + volta por {p.reais(total)}, abaixo do seu limite de {p.reais(limite)}")
+    cias: dict[str, int] = {}
+    for v in todos:
+        cias[v.companhias] = cias.get(v.companhias, 0) + 1
+    print("Voos por companhia: " + ", ".join(f"{c} {n}" for c, n in sorted(cias.items(), key=lambda x: -x[1])))
     print(f"Combinações: {len(combos)} · melhor ida + volta: {p.reais(total) if total else '—'}"
           + (f" (antes {p.reais(anterior)})" if anterior else ""))
     for c in combos[:5]:
