@@ -1,14 +1,14 @@
 {
   "origem": "BSB",
   "destino": "THE",
-  "ida": "2026-10-29",
-  "volta": "2026-11-07",
-  "flex": 2,
-  "chegar_ate": "2026-11-09",
+  "ida_de": "hoje",
+  "volta_ate": "2026-11-08",
+  "dias_min": 3,
+  "dias_max": 8,
   "adultos": 1,
   "criancas": 0,
   "max_paradas": null,
   "malas": 0,
-  "preco_normal": 1000,
-  "alerta_total": 3000
+  "faixas": [500, 700, 1500],
+  "alerta_total": 1500
 }
