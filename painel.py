@@ -252,10 +252,24 @@ def lista_combinacoes(combos: list[dict], ctx: dict) -> str:
             f"{html.escape(v.trecho)} · {p.reais(v.preco)}</span></td>"
             f"<td>{c['dias']} dias</td><td class='preco n-{classe}'>{p.reais(c['total'])}</td>"
             f"<td><span class='tag {classe}'>{texto}</span></td>"
-            f"<td><a href='{html.escape(i.link)}' target='_blank' rel='noopener'>ida</a> · "
-            f"<a href='{html.escape(v.link)}' target='_blank' rel='noopener'>volta</a></td></tr>")
+            f"<td class='links'>{links_comparar(i, v, ctx)}</td></tr>")
     return ("<div class='grade-wrap'><table class='lista'><thead><tr><th>#</th><th>Ida</th><th>Volta</th><th>Estadia</th>"
-            f"<th>Total</th><th>Faixa</th><th>Comprar</th></tr></thead><tbody>{''.join(linhas)}</tbody></table></div>")
+            f"<th>Total</th><th>Faixa</th><th>Comprar / comparar</th></tr></thead><tbody>{''.join(linhas)}</tbody></table></div>")
+
+
+def links_comparar(i: p.Voo, v: p.Voo, ctx: dict) -> str:
+    """Links para a mesma ida e volta no Google e em outros buscadores (só abrem a busca, não raspam o site)."""
+    o, d = ctx["rota"]
+    a = ctx["adultos"]
+    sites = [
+        ("Google ida", i.link),
+        ("Google volta", v.link),
+        ("Decolar", f"https://www.decolar.com/shop/flights/results/roundtrip/{o}/{d}/{i.data}/{v.data}/{a}/0/0"),
+        ("Kayak", f"https://www.kayak.com.br/flights/{o}-{d}/{i.data}/{v.data}/{a}adults?sort=price_a"),
+        ("Skyscanner", f"https://www.skyscanner.com.br/transporte/passagens-aereas/{o.lower()}/{d.lower()}/"
+                       f"{i.data:%y%m%d}/{v.data:%y%m%d}/?adultsv2={a}"),
+    ]
+    return " · ".join(f"<a href='{html.escape(u)}' target='_blank' rel='noopener'>{n}</a>" for n, u in sites)
 
 
 CSS = """
@@ -308,7 +322,7 @@ thead th{background:var(--info-bg);white-space:nowrap}
 .c-promo{background:var(--promo-bg);color:var(--promo)}.c-bom{background:var(--bom-bg);color:var(--bom)}
 .c-ok{background:var(--ok-bg);color:var(--ok)}.c-ruim{background:var(--ruim-bg);color:var(--ruim)}
 .grade td.melhor{outline:2px solid var(--acento);outline-offset:-2px}
-.lista td.num{color:var(--sub)}
+.lista td.num{color:var(--sub)}.lista td.links{font-size:.8rem;min-width:150px}
 .graf{width:100%;height:120px;background:var(--card);border:1px solid var(--borda);border-radius:12px}
 .graf polyline{fill:none;stroke:var(--acento);stroke-width:2;vector-effect:non-scaling-stroke}
 .graf-leg{display:flex;justify-content:space-between;color:var(--sub);font-size:.8rem;margin-top:4px;flex-wrap:wrap;gap:6px}
@@ -406,6 +420,8 @@ def main() -> None:
     ctx = {
         "hoje": agora.date(),
         "prazo": prazo,
+        "rota": (cfg["origem"], cfg["destino"]),
+        "adultos": cfg.get("adultos", 1),
         "faixas": cfg.get("faixas", [500, 700, 1500]),
         "mediana": {s: statistics.median(v.preco for v in voos[s]) if voos[s] else 1 for s in ("ida", "volta")},
         "anteriores": {k: d["atual"] for k, d in hist["precos"].items()},
