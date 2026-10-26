@@ -34,7 +34,10 @@ python passagem.py --origem BSB --destino THE --ida 2026-11-20 --volta 2026-11-2
 
 `painel.py` busca os voos de `monitor.json`, guarda o histórico em `dados/historico.json` e gera `docs/index.html`:
 uma coluna por dia com companhia, horários, preço e etiquetas (Mais barato, Muito caro, Em cima da hora, Madrugada…).
-O workflow `.github/workflows/monitor.yml` roda isso **toda hora** no GitHub e publica o painel no GitHub Pages.
+O seu computador roda a busca **toda hora** (`monitorar.ps1`, agendado com `agendar.ps1`) e envia o painel ao GitHub,
+que o publica no GitHub Pages. Se o painel ficar mais de 50 min sem atualizar (computador desligado), o workflow
+`.github/workflows/monitor.yml` faz a busca sozinho aos :30 de cada hora. A busca do PC é mais precisa: de servidores
+fora do Brasil o Google omite alguns voos (ex.: LATAM diretos).
 
 - Mudar rota, datas, prazo de chegada, preço de referência ou limite: edite `monitor.json` no GitHub.
 - Rodar na hora: aba **Actions** → *Monitor de passagens* → **Run workflow**.
